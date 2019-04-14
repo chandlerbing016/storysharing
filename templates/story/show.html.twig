@@ -1,0 +1,95 @@
+{% extends "base.html.twig" %}
+{% block body %}
+
+{% if story is defined %}
+
+<div id="story">
+    <p>{{ story.getContent }}</p>
+    <p>{{ story.getViewCounter }} times viewed</p>
+    <p>with, {{ story.getUpvoteCounter }} upvotes
+
+        {% if is_granted('ROLE_USER') %}
+        <form method="POST">
+            <input type="hidden" name="token" value="{{ csrf_token('upvote-story') }}" />
+            <input type="hidden" name="submit_upvote" value="1" />
+            <input type="submit" value="Upvote" />
+        </form>
+        {% endif %}
+    </p>
+    <small>Posted by: <b>{{ story.getUser.getPubUsername }}</b></small>
+    <p>Tags:
+        {% for tag in story.getTags %}
+            <span style="border:1px solid black;">{{ tag.getTitle }}</span>
+        {% endfor %}
+    </p>
+</div>
+
+<div id="comments">
+    
+    <p><b>comments on this post</b></p>
+
+    {# Recursive comments #}
+    {% macro story_comments(comments, commentDepth) %}
+        {% import _self as macros %}
+
+        {% for comment in comments %}
+
+            {% set break = false %}
+
+            {# prevent child comments [ comment replies ] from appearing seperatly #}
+            {% if commentDepth == 0 and comment.getParent != null %}
+                {% set break = true %}
+            {% endif %}
+            
+            {# show this comment #}
+            {% if break == false %}
+            {{ ('<div style="border:1px solid black;padding:6px;margin-left:' ~ commentDepth * 10 ~ 'px">') | raw }}
+                <p>
+                    {{ comment.getContent }} - <small>{{ comment.getUser.getPubUsername }}
+                    {% if is_granted('remove', comment) %}
+                        <a href="{{ path('story_commentremove', {'id': comment.getId}) }}">Delete</a>
+                    {% endif %}</small>
+                </p>
+                {% if comment.getChildren != null %}
+                    {% set commentDepth = commentDepth + 1 %}
+                    {{ macros.story_comments(comment.getChildren, commentDepth) }}
+                {% endif %}
+                <div>
+                    <p>leave a reply for <small>{{ comment.getUser.getPubUsername }} [ " {{ comment.getContent }} " ]</small></p>
+                    <form method="POST">
+                        <textarea name="comment" id="" cols="30" rows="2" required="required"></textarea>        
+                        <input type="hidden" name="token" value="{{ csrf_token('comment-story') }}" />
+                        <input type="hidden" name="submit_comment" value="1" />
+                        <input type="hidden" name="submit_comment_reply" value="{{ comment.getId }}" />
+                        <input type="submit" value="comment" />
+                    </form>
+                </div>
+            </div>
+            {# it has reached the recursion end, subtract comment depth by 1 #}
+            {% set commentDepth = commentDepth - 1 %}
+            {% endif %}
+
+        {% endfor %}
+    {% endmacro %}
+
+    {% import _self as macros %}
+    {{ macros.story_comments(story.getComments, 0) }}
+
+</div>
+
+<p>comment about this post</p>
+<div>
+    <form method="POST">
+        <textarea name="comment" id="" cols="30" rows="5" required="required"></textarea>
+        <input type="hidden" name="token" value="{{ csrf_token('comment-story') }}" />
+        <input type="hidden" name="submit_comment" value="1" />
+        <input type="submit" value="comment" />
+    </form>
+</div>
+
+
+{% else %}
+    <p>Not found</p>
+{% endif %}
+
+{% endblock %}

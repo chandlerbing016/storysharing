@@ -1,0 +1,32 @@
+{% extends "base.html.twig" %}
+{% block body %}
+
+    {{ profile.getPubUsername }}
+
+    {% if is_granted('ROLE_USER') and profile != app.user %}
+        <form action="{{ path('json_user_followuser') }}" method="POST">
+            <input type="hidden" name="profile" value="{{ profile.getId }}" />
+            <input type="hidden" name="token" value="{{ csrf_token('follow-unfollow-user') }}" />
+            <input type="submit" value="Follow" />
+        </form>
+    {% endif %}
+
+    <section>
+        <h3>Followers</h3>
+        <ul>
+            {% for follower in profile.getFollowers %}
+                <li>{{ follower.getPubUsername }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section>
+        <h3>Following</h3>
+        <ul>
+            {% for following in profile.getFollowing %}
+                <li>{{ following.getPubUsername }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+{% endblock %}

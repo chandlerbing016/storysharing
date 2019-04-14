@@ -1,0 +1,14 @@
+<a href="{{ path('main_homepage') }}">Homepage</a>
+{% if is_granted('ROLE_USER') %}
+<a href="{{ path('story_add') }}">Add A Story</a>
+<a href="#">Add A Poem</a>
+<div style="float:right;">
+    Hello, <b>{{ app.user.getPubUsername }} [ {{ app.user.getId }} ]</b>
+    <a href="{{ path('app_logout') }}">Logout</a>
+</div>
+{% else %}
+<div style="float:right;">
+    <a href="{{ path('app_login') }}">Login</a>
+    <a href="{{ path('app_register') }}">Register</a>
+</div>
+{% endif %}

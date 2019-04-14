@@ -1,0 +1,133 @@
+{% extends "base.html.twig" %}
+{% block title %}Well - add a new story{% endblock %}
+
+{% block body %}
+<div class="container">
+
+    <h1>Create a new story</h1>
+    {{ form_start(form, {'attr': {'id': 'form-tags'}}) }}
+
+    <div class="form-group">
+        {{ form_label(form.content) }}
+        {{ form_widget(form.content, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <div class="form-group">
+        <label for="tags">enter tags for this post, seperated by a comma</label>
+        <input type="text" id="tags" name="tags" autocomplete="off" placeholder="tags" value="">
+    </div>
+
+    {{ form_widget(form.save, {'attr': {'class': 'btn btn-primary'}}) }}
+
+    <a href="{{ path('main_homepage') }}" class="btn btn-danger">Cancel</a>
+
+    {{ form_end(form, {'render_rest': true}) }}
+
+    <p>suggest a tag</p>
+    <form method="POST">
+        <input type="hidden" name="tag-suggestion" value="1">
+        <input type="hidden" name="token" value="{{ csrf_token('tag-suggestion') }}">
+        <input type="text" name="tag" required="required" autocomplete="off">
+        <input type="submit" value="submit">
+    </form>
+</div>
+{% endblock %}
+
+
+{% block stylesheets %}
+{{ parent() }}
+<link rel="stylesheet" href="https://yaireo.github.io/tagify/dist/tagify.css">
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script src="https://yaireo.github.io/tagify/dist/tagify.js"></script>
+<script>
+    //helping functions
+
+    // func, wait, immediate
+    function debounce(a,b,c){var d;return function(){var e=this,f=arguments;clearTimeout(d),d=setTimeout(function(){d=null,c||a.apply(e,f)},b),c&&!d&&a.apply(e,f)}}
+
+    function onlyUnique(value, index, self) {
+        return self.indexOf(value) === index;
+    }
+
+    if(typeof String.prototype.startsWith === "undefined") {
+        String.prototype.startsWith = function(needle) {
+            return this.indexOf(needle) === 0;
+        };
+    }
+
+    (function() {
+        var tags = document.getElementById("tags");
+        var whitelist = ["suspense", "thriller", "emotions"];
+        var tagsInput = new Tagify(tags, {
+            whitelist: whitelist
+        });
+        var controller;
+
+        // https://github.com/yairEO/tagify
+        tagsInput.on('input', function(e) {
+            var input = e.detail;
+
+            if(input.length < 3) return;
+
+            controller && controller.abort();
+            controller = new AbortController();
+
+            var currentWhitelist = tagsInput.settings.whitelist;
+            var whitelists = tagsInput.settings.whitelist;
+            var shouldFetch = true;
+
+            for(let i=0,len=whitelists.length;i<len;i++) {
+                if(whitelists[i].startsWith(input)) {
+                    shouldFetch = false; break;
+                }
+            }
+
+            if (shouldFetch) {
+                // apply throttling to it
+                fetch('/json/story/tags/' + input)
+                .then(RES => RES.json())
+                .then(function(data) {
+                    tagsInput.settings.whitelist = currentWhitelist.concat(data).filter(onlyUnique);
+                    tagsInput.dropdown.show.call(tagsInput, input);
+                });
+            }
+        });
+        
+        tagsInput.on('add',function(e) {
+            var input = e.detail;
+            if(typeof input !== "undefined") {
+                input = input.data.value;
+            }
+
+            if(!tagsInput.settings.whitelist.includes(input)) {
+                tagsInput.removeTag(input);
+            }
+        });
+
+        document.getElementById("form-tags").addEventListener('submit', function(e) {
+            var tags = tagsInput.value;
+            var tagsString = "";
+
+            tags.map(function(item,index) {
+                if(typeof item.value !== "undefined") {
+                    tagsString += item.value + ",";
+                }
+            });
+
+            if(tagsString !== '') {
+                var tagInput = document.querySelector("input#tags");
+                tagInput.value = tagsString;
+
+                return true;
+            }
+
+            // it didn't work
+
+            e.preventDefault();
+        });
+    })();
+</script>
+{% endblock %}
